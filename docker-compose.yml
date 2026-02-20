@@ -1,0 +1,57 @@
+services:
+  # ─── Aplikasi Backend ─────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bun-hono-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=file:/app/data/dev.db
+      - REDIS_REST_URL=redis://redis:6379
+    volumes:
+      # Persist SQLite database
+      - sqlite_data:/app/data
+      # Persist WhatsApp session agar tidak scan QR tiap restart
+      - wwebjs_auth:/app/.wwebjs_auth
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+  # ─── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: bun-hono-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-network
+    command: redis-server --appendonly yes
+
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  sqlite_data:
+    name: bun-hono-sqlite
+  redis_data:
+    name: bun-hono-redis
+  wwebjs_auth:
+    name: bun-hono-wwebjs-auth
+
+# ─── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  backend-network:
+    name: bun-hono-network
+    driver: bridge
