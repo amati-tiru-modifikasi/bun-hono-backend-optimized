@@ -3,15 +3,12 @@ FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files & prisma schema (needed for postinstall: prisma generate)
 COPY package.json bun.lock* ./
-
-# Install dependencies
-RUN bun install --frozen-lockfile
-
-# Copy prisma schema dan generate client
 COPY prisma ./prisma
-RUN bunx prisma generate
+
+# Install dependencies (postinstall will run prisma generate)
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY . .
